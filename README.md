@@ -11,39 +11,69 @@ A [MoleditPy](https://github.com/HiroYokoyama/moleditpy) plugin that imports che
 
 ## Requirements
 
-- MoleditPy ≥ 4.0
-- Python 3.11+
-- [DECIMER](https://pypi.org/project/DECIMER/) (`pip install DECIMER`)
-- Pillow (`pip install Pillow`)
-- **Windows only:** `tensorflow-cpu` — see [below](#windows-tensorflow-dll-conflict)
+| | |
+|---|---|
+| MoleditPy | ≥ 4.0 |
+| Python | 3.11+ |
+| [DECIMER](https://pypi.org/project/DECIMER/) | deep learning model (pulls in TensorFlow) |
+| Pillow | image loading |
+| tensorflow-cpu | **Windows only** — must be installed before DECIMER (see [below](#windows-install-order)) |
 
 ## Installation
 
-1. Install the plugin dependencies:
+### From the MoleditPy plugin store (easiest)
 
-   ```bash
-   pip install DECIMER Pillow
-   ```
+Open the plugin store at  
+**https://hiroyokoyama.github.io/moleditpy-plugins/explorer/?q=DECIMER+Image+Importer**  
+and follow the download instructions. Then install the Python dependencies below.
 
-   On Windows, also install the CPU build of TensorFlow (required — see below):
+### Python dependencies
 
-   ```bash
-   pip install tensorflow-cpu
-   ```
+**Windows:**
 
-2. Copy (or symlink) the `decimer_plugin/` directory into your MoleditPy plugins folder:
+Install `tensorflow-cpu` *before* DECIMER. DECIMER lists `tensorflow` as a dependency; if `tensorflow-cpu` is already present pip recognises the requirement as satisfied and skips the GPU build. If you install DECIMER first, pip pulls in the full GPU build instead.
 
-   ```
-   %APPDATA%\moleditpy\plugins\decimer_plugin\
-   ```
+```bat
+pip install tensorflow-cpu
+pip install DECIMER Pillow
+```
 
-3. Restart MoleditPy. The menu item `File → Import from Image (DECIMER)...` should appear.
+If you already installed DECIMER and got the GPU build:
+
+```bat
+pip uninstall tensorflow -y
+pip install tensorflow-cpu
+```
+
+**Linux / macOS:**
+
+```bash
+pip install DECIMER Pillow
+```
+
+TensorFlow will be installed automatically as a DECIMER dependency.
+
+### Manual plugin install
+
+Copy (or symlink) the `decimer_plugin/` directory into your MoleditPy plugins folder:
+
+| OS | Path |
+|---|---|
+| Windows | `%APPDATA%\moleditpy\plugins\decimer_plugin\` |
+| Linux | `~/.config/moleditpy/plugins/decimer_plugin/` |
+| macOS | `~/Library/Application Support/moleditpy/plugins/decimer_plugin/` |
+
+Restart MoleditPy. The menu item `File → Import from Image (DECIMER)...` should appear.
 
 ## First use — model download
 
 On the first prediction, DECIMER automatically downloads its model weights (~500 MB) to `~/.data/DECIMER-V2`. This happens inside the background subprocess and may take several minutes depending on your connection. The progress dialog stays open until the download and inference finish. Subsequent predictions reuse the cached model and are much faster (~5–15 s).
 
 ## Windows — TensorFlow DLL conflict
+
+### Windows install order
+
+See [Installation → Python dependencies → Windows](#windows) above. The short version: always `pip install tensorflow-cpu` before `pip install DECIMER`.
 
 ### The problem
 
@@ -67,16 +97,11 @@ The plugin runs `predict_SMILES` in a **fresh subprocess** (`sys.executable -c .
 
 This is handled transparently — no configuration is needed.
 
-### Install tensorflow-cpu, not tensorflow
+### tensorflow-cpu vs tensorflow
 
-The GPU build of TensorFlow (`tensorflow`) additionally requires CUDA and cuDNN DLLs. Unless you have a compatible GPU and the correct CUDA toolkit installed, use the CPU build:
+The GPU build (`tensorflow`) additionally requires CUDA and cuDNN DLLs. Unless you have a compatible GPU and the correct CUDA toolkit installed, the CPU build is the right choice. Install it before DECIMER so pip does not pull in the GPU build as a dependency (see [Windows install order](#windows-install-order)).
 
-```bash
-pip uninstall tensorflow -y
-pip install tensorflow-cpu
-```
-
-TF ≥ 2.18 CPU builds require a CPU with **AVX2** support (Intel Haswell / 2013+ or AMD Ryzen). If your CPU is older, you will need to build TensorFlow from source or use an older release.
+TF ≥ 2.18 CPU builds require **AVX2** (Intel Haswell 2013+ or any AMD Ryzen). Older CPUs will see `Illegal instruction` at runtime; in that case you need to build TensorFlow from source or downgrade to TF 2.10.
 
 ## Development
 
