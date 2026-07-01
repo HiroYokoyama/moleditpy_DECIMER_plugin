@@ -27,6 +27,17 @@ def _import_error_message(exc: ImportError) -> str:
     msg = str(exc)
     if "DECIMER" in msg or not msg:
         return f"DECIMER is not installed.\n\n{_INSTALL_HINT}"
+    if "DLL load failed" in msg or "DLL" in msg:
+        return (
+            "TensorFlow failed to load a Windows DLL required by DECIMER.\n\n"
+            "Common causes:\n"
+            "  • Missing Microsoft Visual C++ Redistributable\n"
+            "  • CUDA / cuDNN version mismatch (if using GPU)\n"
+            "  • Incompatible TensorFlow version\n\n"
+            "Try installing the CPU-only build:\n"
+            "  pip install tensorflow-cpu\n\n"
+            f"Details: {msg}"
+        )
     # A transitive dependency (e.g. tensorflow, transformers) failed to import
     return (
         f"DECIMER is installed but a required dependency could not be imported:\n\n"
