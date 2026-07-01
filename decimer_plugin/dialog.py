@@ -1,4 +1,6 @@
 import logging
+import subprocess
+import sys
 
 from PyQt6.QtWidgets import (
     QDialog,
@@ -21,13 +23,21 @@ _PROGRESS_MSG = (
     "This may take several minutes — the app stays responsive."
 )
 
+# Runs in a subprocess so TensorFlow never loads into MoleditPy's process,
+# avoiding DLL conflicts with PyQt6/PyVista/VTK.
+_SUBPROCESS_SCRIPT = (
+    "import sys;"
+    "from DECIMER import predict_SMILES;"
+    "result = predict_SMILES(sys.argv[1]);"
+    "print(result if result else '', flush=True)"
+)
+
 
 def _import_error_message(exc: ImportError) -> str:
-    """Return a user-friendly message for an ImportError during DECIMER import."""
     msg = str(exc)
     if "DECIMER" in msg or not msg:
         return f"DECIMER is not installed.\n\n{_INSTALL_HINT}"
-    if "DLL load failed" in msg or "DLL" in msg:
+    if "DLL load failed" in msg or "DLL" in msg or "_pywrap_tensorflow" in msg:
         return (
             "TensorFlow failed to load a Windows DLL required by DECIMER.\n\n"
             "Common causes:\n"
@@ -38,7 +48,6 @@ def _import_error_message(exc: ImportError) -> str:
             "  pip install tensorflow-cpu\n\n"
             f"Details: {msg}"
         )
-    # A transitive dependency (e.g. tensorflow, transformers) failed to import
     return (
         f"DECIMER is installed but a required dependency could not be imported:\n\n"
         f"  {msg}\n\n"
@@ -46,8 +55,26 @@ def _import_error_message(exc: ImportError) -> str:
     )
 
 
+def _predict_smiles_subprocess(image_path: str) -> str:
+    """Run predict_SMILES in a fresh subprocess to avoid DLL conflicts with MoleditPy."""
+    result = subprocess.run(
+        [sys.executable, "-c", _SUBPROCESS_SCRIPT, image_path],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr
+        if "No module named 'DECIMER'" in stderr or 'No module named "DECIMER"' in stderr:
+            raise ImportError("No module named 'DECIMER'")
+        if "DLL load failed" in stderr or "_pywrap_tensorflow" in stderr:
+            raise ImportError(stderr.strip())
+        raise RuntimeError(stderr.strip() or f"Subprocess exited with code {result.returncode}")
+    return result.stdout.strip()
+
+
 class _DECIMERWorker(QThread):
-    """Run DECIMER.predict_SMILES in a background thread."""
+    """Run DECIMER prediction in a subprocess via a background thread."""
 
     finished = pyqtSignal(str)
     failed = pyqtSignal(str)
@@ -58,12 +85,17 @@ class _DECIMERWorker(QThread):
 
     def run(self) -> None:
         try:
-            from DECIMER import predict_SMILES  # heavy: loads TF + downloads model
-            smiles = predict_SMILES(self._image_path)
-            self.finished.emit(smiles or "")
+            smiles = _predict_smiles_subprocess(self._image_path)
+            self.finished.emit(smiles)
         except ImportError as exc:
             logging.error("DECIMER plugin: import failed: %s", exc)
             self.failed.emit(_import_error_message(exc))
+        except subprocess.TimeoutExpired:
+            logging.error("DECIMER plugin: prediction timed out")
+            self.failed.emit(
+                "Prediction timed out (10 minutes).\n"
+                "The model download may still be in progress — try again."
+            )
         except Exception as exc:
             logging.exception("DECIMER plugin: prediction failed")
             self.failed.emit(str(exc))
@@ -125,10 +157,6 @@ class ImportFromImageDialog(QDialog):
         row3.addWidget(self._btn_load)
         row3.addWidget(btn_close)
         layout.addLayout(row3)
-
-    # ------------------------------------------------------------------
-    # Slots
-    # ------------------------------------------------------------------
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -203,16 +231,7 @@ class ImportFromImageDialog(QDialog):
             )
 
 
-# ------------------------------------------------------------------
-# Drop-handler helper: async so the main thread never freezes
-# ------------------------------------------------------------------
-
-
 def run_decimer_async(context, image_path: str) -> None:
-    """Start a background DECIMER prediction for a dropped image file.
-
-    Returns immediately — progress dialog and result handling happen via signals.
-    """
     mw = context.get_main_window()
 
     progress = QProgressDialog(_PROGRESS_MSG, None, 0, 0, mw)
@@ -220,7 +239,6 @@ def run_decimer_async(context, image_path: str) -> None:
     progress.setMinimumDuration(0)
     progress.show()
 
-    # parent=mw keeps the worker alive until the main window is destroyed
     worker = _DECIMERWorker(image_path, parent=mw)
 
     def _on_done(smiles: str) -> None:
@@ -252,5 +270,4 @@ def run_decimer_async(context, image_path: str) -> None:
     worker.start()
 
 
-# Keep the old name as an alias so existing tests still pass
 run_decimer_sync = run_decimer_async

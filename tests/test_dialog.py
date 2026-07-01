@@ -1,8 +1,9 @@
 """
 tests/test_dialog.py
-Unit tests for decimer_plugin/dialog.py — worker logic and run_decimer_sync.
+Unit tests for decimer_plugin/dialog.py — worker logic and run_decimer_async.
 """
 
+import subprocess
 import sys
 import types
 import importlib.util
@@ -95,6 +96,49 @@ def _load_dialog():
 _dialog_mod = _load_dialog()
 
 
+class TestPredictSmilesSubprocess:
+    """Test _predict_smiles_subprocess error detection."""
+
+    def _mock_result(self, returncode=0, stdout="", stderr=""):
+        r = MagicMock()
+        r.returncode = returncode
+        r.stdout = stdout
+        r.stderr = stderr
+        return r
+
+    def test_returns_stripped_smiles_on_success(self):
+        with patch("subprocess.run", return_value=self._mock_result(stdout="c1ccccc1\n")):
+            assert _dialog_mod._predict_smiles_subprocess("test.png") == "c1ccccc1"
+
+    def test_returns_empty_string_when_prediction_empty(self):
+        with patch("subprocess.run", return_value=self._mock_result(stdout="\n")):
+            assert _dialog_mod._predict_smiles_subprocess("blank.png") == ""
+
+    def test_raises_import_error_when_decimer_missing(self):
+        r = self._mock_result(returncode=1, stderr="ModuleNotFoundError: No module named 'DECIMER'\n")
+        with patch("subprocess.run", return_value=r):
+            with pytest.raises(ImportError, match="DECIMER"):
+                _dialog_mod._predict_smiles_subprocess("test.png")
+
+    def test_raises_import_error_on_dll_failure(self):
+        r = self._mock_result(returncode=1, stderr="ImportError: DLL load failed while importing _pywrap_tensorflow_internal")
+        with patch("subprocess.run", return_value=r):
+            with pytest.raises(ImportError):
+                _dialog_mod._predict_smiles_subprocess("test.png")
+
+    def test_raises_runtime_error_on_other_failure(self):
+        r = self._mock_result(returncode=1, stderr="ValueError: image format not supported")
+        with patch("subprocess.run", return_value=r):
+            with pytest.raises(RuntimeError, match="image format"):
+                _dialog_mod._predict_smiles_subprocess("test.png")
+
+    def test_raises_runtime_error_with_code_when_stderr_empty(self):
+        r = self._mock_result(returncode=2, stderr="")
+        with patch("subprocess.run", return_value=r):
+            with pytest.raises(RuntimeError, match="code 2"):
+                _dialog_mod._predict_smiles_subprocess("test.png")
+
+
 class TestDECIMERWorkerRun:
     """Test _DECIMERWorker.run() without actually running a thread."""
 
@@ -107,53 +151,45 @@ class TestDECIMERWorkerRun:
 
     def test_emits_smiles_on_success(self):
         worker = self._make_worker("benzene.png")
-        mock_predict = MagicMock(return_value="c1ccccc1")
-        mock_decimer = MagicMock()
-        mock_decimer.predict_SMILES = mock_predict
-        with patch.dict(sys.modules, {"DECIMER": mock_decimer}):
+        with patch.object(_dialog_mod, "_predict_smiles_subprocess", return_value="c1ccccc1"):
             worker.run()
         worker.finished.emit.assert_called_once_with("c1ccccc1")
         worker.failed.emit.assert_not_called()
 
-    def test_emits_empty_string_when_predict_returns_none(self):
+    def test_emits_empty_string_when_predict_returns_empty(self):
         worker = self._make_worker("blank.png")
-        mock_decimer = MagicMock()
-        mock_decimer.predict_SMILES = MagicMock(return_value=None)
-        with patch.dict(sys.modules, {"DECIMER": mock_decimer}):
+        with patch.object(_dialog_mod, "_predict_smiles_subprocess", return_value=""):
             worker.run()
         worker.finished.emit.assert_called_once_with("")
         worker.failed.emit.assert_not_called()
 
     def test_emits_failed_on_import_error(self):
         worker = self._make_worker("img.png")
-        with patch.dict(sys.modules, {}):
-            # Remove DECIMER so ImportError is raised
-            sys.modules.pop("DECIMER", None)
-            with patch("builtins.__import__", side_effect=_raise_import_for_decimer):
-                worker.run()
+        with patch.object(_dialog_mod, "_predict_smiles_subprocess",
+                          side_effect=ImportError("No module named 'DECIMER'")):
+            worker.run()
         worker.failed.emit.assert_called_once()
         msg = worker.failed.emit.call_args[0][0]
         assert "DECIMER" in msg
-        assert "pip install" in msg.lower() or "install" in msg.lower()
+        assert "install" in msg.lower()
+
+    def test_emits_failed_on_timeout(self):
+        worker = self._make_worker("slow.png")
+        with patch.object(_dialog_mod, "_predict_smiles_subprocess",
+                          side_effect=subprocess.TimeoutExpired(cmd=["python"], timeout=600)):
+            worker.run()
+        worker.failed.emit.assert_called_once()
+        msg = worker.failed.emit.call_args[0][0]
+        assert "timed out" in msg.lower() or "timeout" in msg.lower()
+        worker.finished.emit.assert_not_called()
 
     def test_emits_failed_on_general_exception(self):
         worker = self._make_worker("bad.png")
-        mock_decimer = MagicMock()
-        mock_decimer.predict_SMILES = MagicMock(side_effect=ValueError("corrupt image"))
-        with patch.dict(sys.modules, {"DECIMER": mock_decimer}):
+        with patch.object(_dialog_mod, "_predict_smiles_subprocess",
+                          side_effect=RuntimeError("corrupt image")):
             worker.run()
         worker.failed.emit.assert_called_once()
         worker.finished.emit.assert_not_called()
-
-
-def _raise_import_for_decimer(name, *args, **kwargs):
-    if name == "DECIMER" or (args and args[0] and "DECIMER" in str(args[0])):
-        raise ImportError("No module named 'DECIMER'")
-    return original_import(name, *args, **kwargs)
-
-
-import builtins
-original_import = builtins.__import__
 
 
 def _make_sync_worker_class(smiles_result=None, error_msg=None):
