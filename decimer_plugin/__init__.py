@@ -44,8 +44,8 @@ def _open_import_dialog(context) -> None:
                 return
             existing.close()
             existing.deleteLater()
-        except RuntimeError:
-            pass
+        except RuntimeError as exc:
+            logging.warning("DECIMER plugin: could not close existing dialog: %s", exc)
         context.register_window("dialog", None)
 
     mw = context.get_main_window()

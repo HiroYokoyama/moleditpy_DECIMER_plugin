@@ -51,9 +51,10 @@ class _DECIMERWorker(QThread):
             smiles = predict_SMILES(self._image_path)
             self.finished.emit(smiles or "")
         except ImportError as exc:
+            logging.error("DECIMER plugin: import failed: %s", exc)
             self.failed.emit(_import_error_message(exc))
         except Exception as exc:
-            logging.exception("DECIMER prediction failed")
+            logging.exception("DECIMER plugin: prediction failed")
             self.failed.emit(str(exc))
 
 
@@ -172,8 +173,8 @@ class ImportFromImageDialog(QDialog):
         if self._progress is not None:
             try:
                 self._progress.close()
-            except RuntimeError:
-                pass
+            except RuntimeError as exc:
+                logging.warning("DECIMER plugin: could not close progress dialog: %s", exc)
             self._progress = None
 
     def _load_smiles(self) -> None:
@@ -185,7 +186,7 @@ class ImportFromImageDialog(QDialog):
             self._context.show_status_message("Structure loaded from image.", 4000)
             self.close()
         except Exception as exc:
-            logging.exception("Failed to load SMILES from DECIMER result")
+            logging.exception("DECIMER plugin: failed to load SMILES into editor")
             QMessageBox.critical(
                 self, "Import Error", f"Failed to load structure:\n{exc}"
             )
@@ -214,8 +215,8 @@ def run_decimer_async(context, image_path: str) -> None:
     def _on_done(smiles: str) -> None:
         try:
             progress.close()
-        except RuntimeError:
-            pass
+        except RuntimeError as exc:
+            logging.warning("DECIMER plugin: could not close progress dialog: %s", exc)
         if not smiles:
             QMessageBox.warning(
                 mw,
@@ -231,8 +232,8 @@ def run_decimer_async(context, image_path: str) -> None:
     def _on_error(msg: str) -> None:
         try:
             progress.close()
-        except RuntimeError:
-            pass
+        except RuntimeError as exc:
+            logging.warning("DECIMER plugin: could not close progress dialog: %s", exc)
         QMessageBox.critical(mw, "DECIMER Error", msg)
 
     worker.finished.connect(_on_done)
