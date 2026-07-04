@@ -1,23 +1,25 @@
-# MoleditPy DECIMER Plugin
+﻿# MoleditPy DECIMER Plugin
+
+[![Downloads](https://img.shields.io/github/downloads/HiroYokoyama/moleditpy_DECIMER_plugin/total)](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/releases)
 
 A [MoleditPy](https://github.com/HiroYokoyama/moleditpy) plugin that imports chemical structures from PNG/JPG images using the [DECIMER](https://github.com/Kohulan/DECIMER-Image_Transformer) deep learning model.
 
 ## Features
 
-- **Menu action** — `File → Import from Image (DECIMER)...` opens a dialog to browse for an image, predict the SMILES, then load the structure into the editor
-- **Drag-and-drop** — drop a `.png`, `.jpg`, or `.jpeg` file onto the MoleditPy window to predict and load automatically
-- **Non-blocking UI** — prediction runs in a background thread; the editor stays responsive during the 10–30 s inference
-- **Subprocess isolation** — TensorFlow loads in a fresh child process, avoiding DLL conflicts with PyQt6/PyVista on Windows (see [Windows note](#windows-tensorflow-dll-conflict) below)
+- **Menu action** 窶・`File 竊・Import from Image (DECIMER)...` opens a dialog to browse for an image, predict the SMILES, then load the structure into the editor
+- **Drag-and-drop** 窶・drop a `.png`, `.jpg`, or `.jpeg` file onto the MoleditPy window to predict and load automatically
+- **Non-blocking UI** 窶・prediction runs in a background thread; the editor stays responsive during the 10窶・0 s inference
+- **Subprocess isolation** 窶・TensorFlow loads in a fresh child process, avoiding DLL conflicts with PyQt6/PyVista on Windows (see [Windows note](#windows-tensorflow-dll-conflict) below)
 
 ## Requirements
 
 | | |
 |---|---|
-| MoleditPy | ≥ 4.0 |
+| MoleditPy | 竕･ 4.0 |
 | Python | 3.11+ |
 | [DECIMER](https://pypi.org/project/DECIMER/) | deep learning model (pulls in TensorFlow) |
 | Pillow | image loading |
-| tensorflow-cpu | **Windows only** — must be installed before DECIMER (see [below](#windows-install-order)) |
+| tensorflow-cpu | **Windows only** 窶・must be installed before DECIMER (see [below](#windows-install-order)) |
 
 ## Installation
 
@@ -63,17 +65,17 @@ Copy (or symlink) the `decimer_plugin/` directory into your MoleditPy plugins fo
 | Linux | `~/.config/moleditpy/plugins/decimer_plugin/` |
 | macOS | `~/Library/Application Support/moleditpy/plugins/decimer_plugin/` |
 
-Restart MoleditPy. The menu item `File → Import from Image (DECIMER)...` should appear.
+Restart MoleditPy. The menu item `File 竊・Import from Image (DECIMER)...` should appear.
 
-## First use — model download
+## First use 窶・model download
 
-On the first prediction, DECIMER automatically downloads its model weights (~500 MB) to `~/.data/DECIMER-V2`. This happens inside the background subprocess and may take several minutes depending on your connection. The progress dialog stays open until the download and inference finish. Subsequent predictions reuse the cached model and are much faster (~5–15 s).
+On the first prediction, DECIMER automatically downloads its model weights (~500 MB) to `~/.data/DECIMER-V2`. This happens inside the background subprocess and may take several minutes depending on your connection. The progress dialog stays open until the download and inference finish. Subsequent predictions reuse the cached model and are much faster (~5窶・5 s).
 
-## Windows — TensorFlow DLL conflict
+## Windows 窶・TensorFlow DLL conflict
 
 ### Windows install order
 
-See [Installation → Python dependencies → Windows](#windows) above. The short version: always `pip install tensorflow-cpu` before `pip install DECIMER`.
+See [Installation 竊・Python dependencies 竊・Windows](#windows) above. The short version: always `pip install tensorflow-cpu` before `pip install DECIMER`.
 
 ### The problem
 
@@ -95,18 +97,18 @@ This error occurs even when TensorFlow imports cleanly in a standalone Python se
 
 The plugin runs `predict_SMILES` in a **fresh subprocess** (`sys.executable -c ...`). The child process starts with no PyQt6/PyVista DLLs already loaded, so TensorFlow initialises cleanly. Only the resulting SMILES string is passed back to MoleditPy over stdout.
 
-This is handled transparently — no configuration is needed.
+This is handled transparently 窶・no configuration is needed.
 
 ### tensorflow-cpu vs tensorflow
 
 The GPU build (`tensorflow`) additionally requires CUDA and cuDNN DLLs. Unless you have a compatible GPU and the correct CUDA toolkit installed, the CPU build is the right choice. Install it before DECIMER so pip does not pull in the GPU build as a dependency (see [Windows install order](#windows-install-order)).
 
-TF ≥ 2.18 CPU builds require **AVX2** (Intel Haswell 2013+ or any AMD Ryzen). Older CPUs will see `Illegal instruction` at runtime; in that case you need to build TensorFlow from source or downgrade to TF 2.10.
+TF 竕･ 2.18 CPU builds require **AVX2** (Intel Haswell 2013+ or any AMD Ryzen). Older CPUs will see `Illegal instruction` at runtime; in that case you need to build TensorFlow from source or downgrade to TF 2.10.
 
 ## Development
 
 ```bash
-# Clone and run tests (no GPU, no DECIMER download needed — all mocked)
+# Clone and run tests (no GPU, no DECIMER download needed 窶・all mocked)
 git clone https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin
 cd moleditpy_DECIMER_plugin
 pip install pytest
@@ -117,4 +119,4 @@ Tests run fully headlessly: PyQt6, DECIMER, TensorFlow, and PIL are all replaced
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+GNU General Public License v3.0 窶・see [LICENSE](LICENSE).
