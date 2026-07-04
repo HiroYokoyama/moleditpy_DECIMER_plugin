@@ -1,7 +1,7 @@
 import logging
 
 PLUGIN_NAME = "DECIMER Image Importer"
-PLUGIN_VERSION = "1.0.0"
+PLUGIN_VERSION = "1.0.1"
 PLUGIN_AUTHOR = "HiroYokoyama"
 PLUGIN_DESCRIPTION = (
     "Import chemical structures from PNG/JPG/JPEG images using the DECIMER "
