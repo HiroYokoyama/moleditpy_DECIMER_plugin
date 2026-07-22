@@ -1,5 +1,6 @@
 # MoleditPy DECIMER Plugin
 
+[![Tests](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/actions/workflows/test.yml/badge.svg)](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/actions/workflows/test.yml)
 ![Test Coverage](https://img.shields.io/badge/coverage->90%25-green)
 [![Downloads](https://img.shields.io/github/downloads/HiroYokoyama/moleditpy_DECIMER_plugin/total)](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/releases)
 
