@@ -1,7 +1,7 @@
 # MoleditPy DECIMER Plugin
 
 [![Tests](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/actions/workflows/test.yml/badge.svg)](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/actions/workflows/test.yml)
-![Test Coverage](https://img.shields.io/badge/coverage->80%25-green)
+![Test Coverage](https://img.shields.io/badge/coverage->90%25-green)
 [![Downloads](https://img.shields.io/github/downloads/HiroYokoyama/moleditpy_DECIMER_plugin/total)](https://github.com/HiroYokoyama/moleditpy_DECIMER_plugin/releases)
 
 A [MoleditPy](https://github.com/HiroYokoyama/moleditpy) plugin that imports chemical structures from PNG/JPG images using the [DECIMER](https://github.com/Kohulan/DECIMER-Image_Transformer) deep learning model.
