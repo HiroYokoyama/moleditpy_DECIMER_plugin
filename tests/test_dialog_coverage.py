@@ -391,6 +391,9 @@ class TestLoadSmiles:
         assert dlg.closed is False
 
     def test_unparseable_prediction_is_refused(self):
+        # The check degrades to a no-op without RDKit, so the assertion below
+        # only means anything when RDKit is actually importable.
+        pytest.importorskip("rdkit")
         ctx = _make_ctx()
         dlg = _dialog_mod.ImportFromImageDialog(parent=None, context=ctx)
         dlg._smiles_edit.setText("c1ccccc")  # unclosed ring

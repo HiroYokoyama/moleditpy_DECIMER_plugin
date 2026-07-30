@@ -23,7 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install test dependencies
-        run: pip install pytest
+        run: pip install pytest rdkit
 
       - name: Run tests
         run: python -m pytest tests/ -v
