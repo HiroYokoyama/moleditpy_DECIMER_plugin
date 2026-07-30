@@ -33,6 +33,30 @@ _SUBPROCESS_SCRIPT = (
 )
 
 
+def _smiles_problem(smiles: str) -> str:
+    """Return a reason *smiles* cannot be loaded, or "" when it is usable.
+
+    DECIMER is an OCR model, so an unparseable SMILES is a normal outcome for a
+    blurry or crowded drawing. The host's load_from_smiles reports such a
+    failure only on the status bar and returns without raising, so without this
+    check the plugin overwrote that message with its own success text and closed
+    the dialog as though the structure had loaded.
+    """
+    if not smiles:
+        return "DECIMER returned an empty result."
+    try:
+        from rdkit import Chem
+    except ImportError:
+        return ""
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+    except Exception as exc:
+        return f"RDKit could not parse the predicted SMILES: {exc}"
+    if mol is None:
+        return "The predicted SMILES is not valid and cannot be drawn."
+    return ""
+
+
 def _import_error_message(exc: ImportError) -> str:
     msg = str(exc)
     if "DECIMER" in msg or not msg:
@@ -220,6 +244,15 @@ class ImportFromImageDialog(QDialog):
         smiles = self._smiles_edit.text().strip()
         if not smiles or self._context is None:
             return
+        problem = _smiles_problem(smiles)
+        if problem:
+            QMessageBox.warning(
+                self,
+                "Unusable Prediction",
+                f"{problem}\n\nSMILES: {smiles}\n\n"
+                "Try a clearer image, or edit the SMILES above before loading.",
+            )
+            return
         try:
             self._context.load_from_smiles(smiles)
             self._context.show_status_message("Structure loaded from image.", 4000)
@@ -251,6 +284,15 @@ def run_decimer_async(context, image_path: str) -> None:
                 mw,
                 "No Structure Found",
                 "DECIMER could not predict a structure from the dropped image.",
+            )
+            return
+        problem = _smiles_problem(smiles)
+        if problem:
+            QMessageBox.warning(
+                mw,
+                "Unusable Prediction",
+                f"{problem}\n\nSMILES: {smiles}\n\n"
+                "Try a clearer image with a single structure drawn.",
             )
             return
         context.load_from_smiles(smiles)

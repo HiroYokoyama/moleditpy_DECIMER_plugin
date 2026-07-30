@@ -383,9 +383,21 @@ class TestLoadSmiles:
         ctx = _make_ctx()
         ctx.load_from_smiles.side_effect = ValueError("bad smiles")
         dlg = _dialog_mod.ImportFromImageDialog(parent=None, context=ctx)
-        dlg._smiles_edit.setText("!!!")
+        # A parseable SMILES, so the injected side effect is what raises --
+        # an unparseable one is now rejected before load_from_smiles is called.
+        dlg._smiles_edit.setText("CCO")
         dlg._load_smiles()
         assert any(c[0] == "critical" for c in _QMessageBox.calls)
+        assert dlg.closed is False
+
+    def test_unparseable_prediction_is_refused(self):
+        ctx = _make_ctx()
+        dlg = _dialog_mod.ImportFromImageDialog(parent=None, context=ctx)
+        dlg._smiles_edit.setText("c1ccccc")  # unclosed ring
+        dlg._load_smiles()
+        ctx.load_from_smiles.assert_not_called()
+        ctx.show_status_message.assert_not_called()
+        assert any(c[0] == "warning" for c in _QMessageBox.calls)
         assert dlg.closed is False
 
 
