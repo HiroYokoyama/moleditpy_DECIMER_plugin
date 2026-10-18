@@ -67,7 +67,7 @@ class TestPluginMetadata:
 
     def test_supported_version_targets_v5(self):
         ver = self.mod.PLUGIN_SUPPORTED_MOLEDITPY_VERSION
-        assert "5.0.0a1" in ver
+        assert "5.0.0" in ver
 
 
 class TestInitializeRegistrations:
