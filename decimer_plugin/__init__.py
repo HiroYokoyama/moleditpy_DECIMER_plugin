@@ -7,7 +7,7 @@ PLUGIN_DESCRIPTION = (
     "Import chemical structures from PNG/JPG/JPEG images using the DECIMER "
     "deep learning model (SMILES prediction from chemical structure drawings)."
 )
-PLUGIN_SUPPORTED_MOLEDITPY_VERSION = ">=5.0.0a1, <6.0.0"
+PLUGIN_SUPPORTED_MOLEDITPY_VERSION = ">=5.0.0, <6.0.0"
 PLUGIN_DEPENDENCIES = ["DECIMER", "Pillow"]
 
 _context = None
