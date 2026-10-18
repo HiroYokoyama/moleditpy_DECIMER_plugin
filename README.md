@@ -18,7 +18,7 @@ A [MoleditPy](https://github.com/HiroYokoyama/moleditpy) plugin that imports che
 
 | | |
 |---|---|
-| MoleditPy | ≥ 4.0 |
+| MoleditPy | ≥ 5.0.0, < 6.0.0 |
 | Python | 3.11+ |
 | [DECIMER](https://pypi.org/project/DECIMER/) | deep learning model (pulls in TensorFlow) |
 | Pillow | image loading |
