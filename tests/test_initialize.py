@@ -65,9 +65,9 @@ class TestPluginMetadata:
         assert isinstance(deps, list)
         assert any("DECIMER" in d for d in deps)
 
-    def test_supported_version_targets_v4(self):
+    def test_supported_version_targets_v5(self):
         ver = self.mod.PLUGIN_SUPPORTED_MOLEDITPY_VERSION
-        assert "4" in ver
+        assert "5.0.0a1" in ver
 
 
 class TestInitializeRegistrations:

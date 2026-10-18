@@ -28,9 +28,9 @@ def _make_widget_class(class_name: str):
 
 
 def _install_qt_stubs():
-    """Install minimal PyQt6 stubs so dialog.py can be imported."""
-    qt_core = types.ModuleType("PyQt6.QtCore")
-    qt_core.pyqtSignal = lambda *a, **kw: MagicMock()
+    """Install minimal PySide6 stubs so dialog.py can be imported."""
+    qt_core = types.ModuleType("PySide6.QtCore")
+    qt_core.Signal = lambda *a, **kw: MagicMock()
     qt_core.Qt = MagicMock()
 
     class _QThread:
@@ -57,7 +57,7 @@ def _install_qt_stubs():
         @staticmethod
         def getOpenFileName(*a, **kw): return ("", "")
 
-    qt_widgets = types.ModuleType("PyQt6.QtWidgets")
+    qt_widgets = types.ModuleType("PySide6.QtWidgets")
     for name in [
         "QDialog",
         "QVBoxLayout",
@@ -72,13 +72,13 @@ def _install_qt_stubs():
     qt_widgets.QMessageBox = _QMessageBox
     qt_widgets.QFileDialog = _QFileDialog
 
-    pyqt6 = types.ModuleType("PyQt6")
-    pyqt6.QtCore = qt_core
-    pyqt6.QtWidgets = qt_widgets
+    pyside6 = types.ModuleType("PySide6")
+    pyside6.QtCore = qt_core
+    pyside6.QtWidgets = qt_widgets
 
-    sys.modules.setdefault("PyQt6", pyqt6)
-    sys.modules["PyQt6.QtCore"] = qt_core
-    sys.modules["PyQt6.QtWidgets"] = qt_widgets
+    sys.modules.setdefault("PySide6", pyside6)
+    sys.modules["PySide6.QtCore"] = qt_core
+    sys.modules["PySide6.QtWidgets"] = qt_widgets
 
 
 _install_qt_stubs()
