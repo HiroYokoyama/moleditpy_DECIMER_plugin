@@ -122,4 +122,8 @@ Tests run fully headlessly: PySide6, DECIMER, TensorFlow, and PIL are all replac
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+GNU Lesser General Public License v3.0 — see [LICENSE](LICENSE).
+
+## Licensing scope
+
+First-party code in this migration is LGPL-3.0-or-later. See [LICENSE](LICENSE), [COPYING](COPYING) and [dependency/provenance terms](LICENSING.md). Third-party components and historical releases retain their own terms.

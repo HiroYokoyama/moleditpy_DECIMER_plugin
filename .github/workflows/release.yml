@@ -54,7 +54,7 @@ jobs:
       - name: Build release package
         run: |
           TAG="$VERSION"
-          cp README.md LICENSE decimer_plugin/
+          cp README.md LICENSE COPYING LICENSING.md decimer_plugin/
           zip -r "decimer_plugin_${TAG}.zip" decimer_plugin/ --exclude "*/__pycache__/*" "*/.git/*"
 
       - name: Create GitHub Release
