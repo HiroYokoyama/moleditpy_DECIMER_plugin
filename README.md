@@ -12,13 +12,13 @@ A [MoleditPy](https://github.com/HiroYokoyama/moleditpy) plugin that imports che
 - **Menu action** — `File → Import from Image (DECIMER)...` opens a dialog to browse for an image, predict the SMILES, then load the structure into the editor
 - **Drag-and-drop** — drop a `.png`, `.jpg`, or `.jpeg` file onto the MoleditPy window to predict and load automatically
 - **Non-blocking UI** — prediction runs in a background thread; the editor stays responsive during the 10–30 s inference
-- **Subprocess isolation** — TensorFlow loads in a fresh child process, avoiding DLL conflicts with PyQt6/PyVista on Windows (see [Windows note](#windows-tensorflow-dll-conflict) below)
+- **Subprocess isolation** — TensorFlow loads in a fresh child process, avoiding DLL conflicts with PySide6/PyVista on Windows (see [Windows note](#windows-tensorflow-dll-conflict) below)
 
 ## Requirements
 
 | | |
 |---|---|
-| MoleditPy | ≥ 4.0 |
+| MoleditPy | ≥ 5.0.0, < 6.0.0 |
 | Python | 3.11+ |
 | [DECIMER](https://pypi.org/project/DECIMER/) | deep learning model (pulls in TensorFlow) |
 | Pillow | image loading |
@@ -82,7 +82,7 @@ See [Installation → Python dependencies → Windows](#windows) above. The shor
 
 ### The problem
 
-MoleditPy loads PyQt6, PyVista, and VTK at startup. These frameworks load several Windows system DLLs into the process. TensorFlow's `_pywrap_tensorflow_internal.pyd` relies on the same DLLs, and the versions already loaded by PyVista/VTK conflict with what TensorFlow expects. The result is:
+MoleditPy loads PySide6, PyVista, and VTK at startup. These frameworks load several Windows system DLLs into the process. TensorFlow's `_pywrap_tensorflow_internal.pyd` relies on the same DLLs, and the versions already loaded by PyVista/VTK conflict with what TensorFlow expects. The result is:
 
 ```
 ImportError: DLL load failed while importing _pywrap_tensorflow_internal
@@ -98,7 +98,7 @@ This error occurs even when TensorFlow imports cleanly in a standalone Python se
 
 ### The fix
 
-The plugin runs `predict_SMILES` in a **fresh subprocess** (`sys.executable -c ...`). The child process starts with no PyQt6/PyVista DLLs already loaded, so TensorFlow initialises cleanly. Only the resulting SMILES string is passed back to MoleditPy over stdout.
+The plugin runs `predict_SMILES` in a **fresh subprocess** (`sys.executable -c ...`). The child process starts with no PySide6/PyVista DLLs already loaded, so TensorFlow initialises cleanly. Only the resulting SMILES string is passed back to MoleditPy over stdout.
 
 This is handled transparently — no configuration is needed.
 
@@ -118,8 +118,12 @@ pip install pytest
 python -m pytest tests/ -v
 ```
 
-Tests run fully headlessly: PyQt6, DECIMER, TensorFlow, and PIL are all replaced with lightweight stubs. No model download or GPU is required.
+Tests run fully headlessly: PySide6, DECIMER, TensorFlow, and PIL are all replaced with lightweight stubs. No model download or GPU is required.
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+GNU Lesser General Public License v3.0 — see [LICENSE](LICENSE).
+
+## Licensing scope
+
+First-party code in this migration is LGPL-3.0-or-later. See [LICENSE](LICENSE), [COPYING](COPYING) and [dependency/provenance terms](LICENSING.md). Third-party components and historical releases retain their own terms.

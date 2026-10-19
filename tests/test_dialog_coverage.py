@@ -5,7 +5,7 @@ Additional coverage for decimer_plugin/dialog.py: ImportFromImageDialog UI wirin
 _load_smiles), _import_error_message branches, _DECIMERWorker.__init__, and the
 RuntimeError-on-progress-close branches inside run_decimer_async.
 
-Uses its own richer (stateful) PyQt6 stubs so the dialog's real logic (text
+Uses its own richer (stateful) PySide6 stubs so the dialog's real logic (text
 storage, enabled flags, signal wiring) can be exercised, unlike the minimal
 no-op stubs in test_dialog.py.
 """
@@ -155,12 +155,12 @@ class _QThread:
 
 
 def _install_qt_stubs():
-    qt_core = types.ModuleType("PyQt6.QtCore")
-    qt_core.pyqtSignal = lambda *a, **kw: _Signal()
+    qt_core = types.ModuleType("PySide6.QtCore")
+    qt_core.Signal = lambda *a, **kw: _Signal()
     qt_core.Qt = MagicMock()
     qt_core.QThread = _QThread
 
-    qt_widgets = types.ModuleType("PyQt6.QtWidgets")
+    qt_widgets = types.ModuleType("PySide6.QtWidgets")
     qt_widgets.QDialog = _QDialog
     qt_widgets.QVBoxLayout = _QLayout
     qt_widgets.QHBoxLayout = _QLayout
@@ -171,13 +171,13 @@ def _install_qt_stubs():
     qt_widgets.QMessageBox = _QMessageBox
     qt_widgets.QProgressDialog = _QProgressDialog
 
-    pyqt6 = types.ModuleType("PyQt6")
-    pyqt6.QtCore = qt_core
-    pyqt6.QtWidgets = qt_widgets
+    pyside6 = types.ModuleType("PySide6")
+    pyside6.QtCore = qt_core
+    pyside6.QtWidgets = qt_widgets
 
-    sys.modules["PyQt6"] = pyqt6
-    sys.modules["PyQt6.QtCore"] = qt_core
-    sys.modules["PyQt6.QtWidgets"] = qt_widgets
+    sys.modules["PySide6"] = pyside6
+    sys.modules["PySide6.QtCore"] = qt_core
+    sys.modules["PySide6.QtWidgets"] = qt_widgets
 
 
 _install_qt_stubs()

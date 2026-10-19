@@ -2,7 +2,7 @@ import logging
 import subprocess
 import sys
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressDialog,
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PySide6.QtCore import Qt, QThread, Signal
 
 _INSTALL_HINT = "Install with:\n  pip install DECIMER"
 
@@ -24,7 +24,7 @@ _PROGRESS_MSG = (
 )
 
 # Runs in a subprocess so TensorFlow never loads into MoleditPy's process,
-# avoiding DLL conflicts with PyQt6/PyVista/VTK.
+# avoiding DLL conflicts with PySide6/PyVista/VTK.
 _SUBPROCESS_SCRIPT = (
     "import sys;"
     "from DECIMER import predict_SMILES;"
@@ -100,8 +100,8 @@ def _predict_smiles_subprocess(image_path: str) -> str:
 class _DECIMERWorker(QThread):
     """Run DECIMER prediction in a subprocess via a background thread."""
 
-    finished = pyqtSignal(str)
-    failed = pyqtSignal(str)
+    finished = Signal(str)
+    failed = Signal(str)
 
     def __init__(self, image_path: str, parent=None):
         super().__init__(parent)

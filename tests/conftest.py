@@ -3,7 +3,7 @@ Shared test infrastructure for moleditpy_DECIMER_plugin.
 
 Provides:
 - ``mock_optional_imports()`` — context manager that intercepts heavy/optional
-  dependencies (PyQt6, DECIMER, PIL, etc.) with MagicMock so tests run headlessly.
+  dependencies (PySide6, DECIMER, PIL, etc.) with MagicMock so tests run headlessly.
 - ``load_plugin(path)`` — load a plugin .py file with deps already mocked.
 - ``make_context()`` — build a stub PluginContext (MagicMock with non-None main window).
 """
@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 BLOCKED_TOPS: frozenset[str] = frozenset(
     {
-        "PyQt6",
+        "PySide6",
         "DECIMER",
         "Pillow",
         "PIL",
