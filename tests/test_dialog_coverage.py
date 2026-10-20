@@ -156,6 +156,7 @@ class _QThread:
 
 def _install_qt_stubs():
     qt_core = types.ModuleType("PySide6.QtCore")
+    qt_core.Slot = lambda *args, **kwargs: lambda fn: fn
     qt_core.Signal = lambda *a, **kw: _Signal()
     qt_core.Qt = MagicMock()
     qt_core.QThread = _QThread
@@ -188,6 +189,7 @@ def _load_dialog():
     spec = importlib.util.spec_from_file_location(mod_name, DIALOG_PATH)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[mod_name] = mod
+    mod.__package__ = "decimer_plugin"
     spec.loader.exec_module(mod)
     return mod
 
