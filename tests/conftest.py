@@ -95,3 +95,18 @@ def make_context() -> MagicMock:
     ctx = MagicMock()
     ctx.get_main_window.return_value = MagicMock()
     return ctx
+
+
+# Unit suites use synchronous Qt doubles; native delivery is tested in subprocesses.
+import sys as _callback_sys
+import types as _callback_types
+
+
+def _connect_callback_double(signal, callback, owner=None, signature=(), cleanup=()):
+    signal.connect(callback)
+    return callback
+
+
+_callback_module = _callback_types.ModuleType("decimer_plugin._qt_callbacks")
+_callback_module.connect_queued = _connect_callback_double
+_callback_sys.modules[_callback_module.__name__] = _callback_module

@@ -30,7 +30,8 @@ def _load_init():
         mod = importlib.util.module_from_spec(spec)
         sys.modules["decimer_plugin"] = mod
         sys.modules["decimer_plugin.dialog"] = _mock_dialog_module
-        spec.loader.exec_module(mod)
+        mod.__package__ = "decimer_plugin"
+    spec.loader.exec_module(mod)
 
     # Keep registered after context exits so callbacks can do relative imports
     sys.modules["decimer_plugin"] = mod

@@ -1,3 +1,5 @@
+
+from ._qt_callbacks import connect_queued
 import logging
 import subprocess
 import sys
@@ -209,8 +211,8 @@ class ImportFromImageDialog(QDialog):
         self._progress.show()
 
         self._worker = _DECIMERWorker(path, parent=self)
-        self._worker.finished.connect(self._on_done)
-        self._worker.failed.connect(self._on_error)
+        connect_queued(self._worker.finished, self._on_done, self, (str,), cleanup=(self._worker.finished, self._worker.failed))
+        connect_queued(self._worker.failed, self._on_error, self, (str,), cleanup=(self._worker.finished, self._worker.failed))
         self._worker.start()
 
     def _on_done(self, smiles: str) -> None:
@@ -307,8 +309,8 @@ def run_decimer_async(context, image_path: str) -> None:
             logging.warning("DECIMER plugin: could not close progress dialog: %s", exc)
         QMessageBox.critical(mw, "DECIMER Error", msg)
 
-    worker.finished.connect(_on_done)
-    worker.failed.connect(_on_error)
+    connect_queued(worker.finished, _on_done, mw, (str,), cleanup=(worker.finished, worker.failed))
+    connect_queued(worker.failed, _on_error, mw, (str,), cleanup=(worker.finished, worker.failed))
     worker.start()
 
 
