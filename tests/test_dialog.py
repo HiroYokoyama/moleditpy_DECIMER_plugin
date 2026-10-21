@@ -147,7 +147,7 @@ class TestDECIMERWorkerRun:
     def _make_worker(self, image_path="test.png"):
         worker = _dialog_mod._DECIMERWorker.__new__(_dialog_mod._DECIMERWorker)
         worker._image_path = image_path
-        worker.finished = MagicMock()
+        worker.completed = MagicMock()
         worker.failed = MagicMock()
         return worker
 
@@ -155,14 +155,14 @@ class TestDECIMERWorkerRun:
         worker = self._make_worker("benzene.png")
         with patch.object(_dialog_mod, "_predict_smiles_subprocess", return_value="c1ccccc1"):
             worker.run()
-        worker.finished.emit.assert_called_once_with("c1ccccc1")
+        worker.completed.emit.assert_called_once_with("c1ccccc1")
         worker.failed.emit.assert_not_called()
 
     def test_emits_empty_string_when_predict_returns_empty(self):
         worker = self._make_worker("blank.png")
         with patch.object(_dialog_mod, "_predict_smiles_subprocess", return_value=""):
             worker.run()
-        worker.finished.emit.assert_called_once_with("")
+        worker.completed.emit.assert_called_once_with("")
         worker.failed.emit.assert_not_called()
 
     def test_emits_failed_on_import_error(self):
@@ -183,7 +183,7 @@ class TestDECIMERWorkerRun:
         worker.failed.emit.assert_called_once()
         msg = worker.failed.emit.call_args[0][0]
         assert "timed out" in msg.lower() or "timeout" in msg.lower()
-        worker.finished.emit.assert_not_called()
+        worker.completed.emit.assert_not_called()
 
     def test_emits_failed_on_general_exception(self):
         worker = self._make_worker("bad.png")
@@ -191,7 +191,7 @@ class TestDECIMERWorkerRun:
                           side_effect=RuntimeError("corrupt image")):
             worker.run()
         worker.failed.emit.assert_called_once()
-        worker.finished.emit.assert_not_called()
+        worker.completed.emit.assert_not_called()
 
 
 def _make_sync_worker_class(smiles_result=None, error_msg=None):
@@ -201,7 +201,7 @@ def _make_sync_worker_class(smiles_result=None, error_msg=None):
         _finished_slots: list = []
         _failed_slots: list = []
 
-        class finished:
+        class completed:
             @classmethod
             def connect(cls, fn):
                 _SyncWorker._finished_slots.append(fn)
@@ -211,9 +211,18 @@ def _make_sync_worker_class(smiles_result=None, error_msg=None):
             def connect(cls, fn):
                 _SyncWorker._failed_slots.append(fn)
 
+        class finished:
+            @classmethod
+            def connect(cls, fn):
+                _SyncWorker._stopped_slots.append(fn)
+
         def __init__(self, image_path, parent=None):
             _SyncWorker._finished_slots = []
             _SyncWorker._failed_slots = []
+            _SyncWorker._stopped_slots = []
+
+        def deleteLater(self):
+            pass
 
         def start(self):
             if error_msg is not None:
@@ -222,6 +231,8 @@ def _make_sync_worker_class(smiles_result=None, error_msg=None):
             else:
                 for fn in _SyncWorker._finished_slots:
                     fn(smiles_result or "")
+            for fn in _SyncWorker._stopped_slots:
+                fn()
 
     return _SyncWorker
 
