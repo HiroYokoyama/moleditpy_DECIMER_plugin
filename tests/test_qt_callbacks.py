@@ -10,6 +10,82 @@ HELPER = Path(__file__).resolve().parents[1] / "decimer_plugin/_qt_callbacks.py"
 
 
 class QueuedCallbackTests(unittest.TestCase):
+    def test_reopening_hidden_dialog_keeps_prediction_thread_alive(self):
+        self.run_qt(f"""
+sys.path.insert(0, {str(HELPER.parents[1])!r})
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+from PySide6.QtWidgets import QApplication, QWidget
+import threading, time
+import decimer_plugin
+from decimer_plugin import dialog as module
+app = QApplication([])
+gate, entered = threading.Event(), threading.Event()
+def predict(path):
+    entered.set()
+    gate.wait(5)
+    return 'C'
+module._predict_smiles_subprocess = predict
+main = QWidget()
+class Context:
+    window = None
+    def get_window(self, key): return self.window
+    def register_window(self, key, value): self.window = value
+    def get_main_window(self): return main
+context = Context()
+decimer_plugin._open_import_dialog(context)
+first = context.window
+first._path_edit.setText('example.png')
+first._start_prediction()
+worker = first._worker
+assert entered.wait(2)
+try:
+    first.hide()
+    decimer_plugin._open_import_dialog(context)
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert not isValid(first)
+    assert worker.isRunning()
+    assert worker in module._RUNNING_WORKERS
+finally:
+    gate.set()
+    assert worker.wait(3000)
+drain(app)
+assert not module._RUNNING_WORKERS
+assert not isValid(worker)
+""")
+
+    def test_dropped_image_worker_survives_main_window_destruction(self):
+        self.run_qt(f"""
+sys.path.insert(0, {str(HELPER.parents[1])!r})
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+from PySide6.QtWidgets import QApplication, QWidget
+import threading
+from decimer_plugin import dialog as module
+app = QApplication([])
+gate, entered = threading.Event(), threading.Event()
+def predict(path):
+    entered.set()
+    gate.wait(5)
+    return 'C'
+module._predict_smiles_subprocess = predict
+main = QWidget()
+class Context:
+    def get_main_window(self): return main
+    def load_from_smiles(self, smiles): raise AssertionError('late UI callback')
+context = Context()
+module.run_decimer_async(context, 'example.png')
+assert entered.wait(2)
+worker = next(iter(module._RUNNING_WORKERS))
+try:
+    delete(main)
+    assert worker.isRunning()
+finally:
+    gate.set()
+    assert worker.wait(3000)
+drain(app)
+assert not module._RUNNING_WORKERS
+assert not isValid(worker)
+""")
+
     def run_qt(self, body):
         prefix = f"""
 import sys

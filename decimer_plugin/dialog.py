@@ -25,6 +25,20 @@ _PROGRESS_MSG = (
     "This may take several minutes — the app stays responsive."
 )
 
+# Dialog destruction must not destroy a thread still waiting for DECIMER.
+_RUNNING_WORKERS = set()
+
+
+def _start_worker(worker):
+    _RUNNING_WORKERS.add(worker)
+
+    def release():
+        _RUNNING_WORKERS.discard(worker)
+        worker.deleteLater()
+
+    connect_queued(worker.finished, release, cleanup=(worker.finished,))
+    worker.start()
+
 # Runs in a subprocess so TensorFlow never loads into MoleditPy's process,
 # avoiding DLL conflicts with PySide6/PyVista/VTK.
 _SUBPROCESS_SCRIPT = (
@@ -102,7 +116,7 @@ def _predict_smiles_subprocess(image_path: str) -> str:
 class _DECIMERWorker(QThread):
     """Run DECIMER prediction in a subprocess via a background thread."""
 
-    finished = Signal(str)
+    completed = Signal(str)
     failed = Signal(str)
 
     def __init__(self, image_path: str, parent=None):
@@ -112,7 +126,7 @@ class _DECIMERWorker(QThread):
     def run(self) -> None:
         try:
             smiles = _predict_smiles_subprocess(self._image_path)
-            self.finished.emit(smiles)
+            self.completed.emit(smiles)
         except ImportError as exc:
             logging.error("DECIMER plugin: import failed: %s", exc)
             self.failed.emit(_import_error_message(exc))
@@ -210,10 +224,10 @@ class ImportFromImageDialog(QDialog):
         self._progress.setMinimumDuration(0)
         self._progress.show()
 
-        self._worker = _DECIMERWorker(path, parent=self)
-        connect_queued(self._worker.finished, self._on_done, self, (str,), cleanup=(self._worker.finished, self._worker.failed))
-        connect_queued(self._worker.failed, self._on_error, self, (str,), cleanup=(self._worker.finished, self._worker.failed))
-        self._worker.start()
+        self._worker = _DECIMERWorker(path)
+        connect_queued(self._worker.completed, self._on_done, self, (str,), cleanup=(self._worker.finished,))
+        connect_queued(self._worker.failed, self._on_error, self, (str,), cleanup=(self._worker.finished,))
+        _start_worker(self._worker)
 
     def _on_done(self, smiles: str) -> None:
         self._close_progress()
@@ -274,7 +288,7 @@ def run_decimer_async(context, image_path: str) -> None:
     progress.setMinimumDuration(0)
     progress.show()
 
-    worker = _DECIMERWorker(image_path, parent=mw)
+    worker = _DECIMERWorker(image_path)
 
     def _on_done(smiles: str) -> None:
         try:
@@ -309,9 +323,9 @@ def run_decimer_async(context, image_path: str) -> None:
             logging.warning("DECIMER plugin: could not close progress dialog: %s", exc)
         QMessageBox.critical(mw, "DECIMER Error", msg)
 
-    connect_queued(worker.finished, _on_done, mw, (str,), cleanup=(worker.finished, worker.failed))
-    connect_queued(worker.failed, _on_error, mw, (str,), cleanup=(worker.finished, worker.failed))
-    worker.start()
+    connect_queued(worker.completed, _on_done, mw, (str,), cleanup=(worker.finished,))
+    connect_queued(worker.failed, _on_error, mw, (str,), cleanup=(worker.finished,))
+    _start_worker(worker)
 
 
 run_decimer_sync = run_decimer_async

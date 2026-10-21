@@ -210,13 +210,18 @@ def _make_sync_worker_class(smiles_result=None, error_msg=None):
         def __init__(self, image_path, parent=None):
             self._image_path = image_path
             self.finished = _Signal()
+            self.completed = _Signal()
             self.failed = _Signal()
 
         def start(self):
             if error_msg is not None:
                 self.failed.emit(error_msg)
             else:
-                self.finished.emit(smiles_result or "")
+                self.completed.emit(smiles_result or "")
+            self.finished.emit()
+
+        def deleteLater(self):
+            pass
 
     return _SyncWorker
 
